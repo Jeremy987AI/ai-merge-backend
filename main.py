@@ -88,3 +88,15 @@ async def ask_openrouter(request: PromptRequest):
         return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+class Feedback(BaseModel):
+    prompt: str
+    response: str
+    rating: Literal[1, -1]  # 1 = thumbs up, -1 = thumbs down
+
+@app.post("/feedback")
+async def store_feedback(data: Feedback):
+    response = supabase.table("feedback").insert(data.dict()).execute()
+    if response.status_code == 201:
+        return {"message": "Feedback saved!"}
+    else:
+        return {"error": "Failed to save feedback", "details": response.data}
