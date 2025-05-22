@@ -43,3 +43,42 @@ async def ask_ai(request: AskRequest):
         "question": question,
         "responses": responses
     }
+import os
+import httpx
+from dotenv import load_dotenv
+
+load_dotenv()
+
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+
+async def query_openrouter(prompt: str, model: str = "mistralai/mistral-7b-instruct"):
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "HTTP-Referer": "https://yourdomain.com",  # or localhost for now
+        "X-Title": "AI Merge Assistant"
+    }
+    payload = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    url = "https://openrouter.ai/api/v1/chat/completions"
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, headers=headers, json=payload)
+        return response.json()
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
+app = FastAPI()
+
+class PromptRequest(BaseModel):
+    prompt: str
+    model: str = "mistralai/mistral-7b-instruct"
+
+@app.post("/ask/openrouter")
+async def ask_openrouter(request: PromptRequest):
+    try:
+        response = await query_openrouter(request.prompt, request.model)
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
